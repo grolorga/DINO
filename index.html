@@ -53,11 +53,11 @@
         setPlayerImage(`run${runFrame}.png`);
       }, 200);
     }
-
+//сделать генерацию кактусов в 1х 2х лниях и птеродактилей в 2х верхних линиях
     function generateEnemy() {
       setInterval(() => {
         const type = Math.random() > 0.5 ? 'cactus' : 'pterodactyl';
-        const laneIndex = Math.floor(Math.random() * 1);
+        const laneIndex = Math.floor(Math.random() * 3);
         const enemy = document.createElement('div');
         enemy.classList.add('enemy');
         enemy.style.top = `${lanes[laneIndex] * 100}%`;
