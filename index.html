@@ -10,7 +10,7 @@
 
 
 
-    
+
     * {
       margin: 0;
       padding: 0;
@@ -54,14 +54,49 @@
       background-size: cover;
       right: -100px;
     }
+    .death-screen{
+      position: absolute;
+      width: 100vw;
+      height: 100vh;
+      opacity: 0;
+      z-index: 2;
+    }
+    .game-cover{
+      position: absolute;
+      width: 100vw;
+      height: 100vh;
+      opacity: 0;
+      z-index: 1;
+    }
+    .restart{
+      position: absolute;
+      top: 70%;
+      left: 28%;
+      width: 40vw;
+      height: 5vh;
+      opacity: 0;
+      z-index: 3;
+    }
+    #score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 20px;
+            color: #333;
+        }
   </style>
 </head>
 <body>
+  <img class="death-screen" src="source/_.png">
+  <img class="game-cover" src="source/anti-point grind.jpg">
+  <img class="restart" src="source/button.png">
+  <audio class="death-sound" src="source/dark-souls-you-died-sound-effect_hm5sYFG.mp3" ></audio>
   <div id="game">
     <div class="lane"></div>
     <div class="lane"></div>
     <div class="lane"></div>
     <div id="player"></div>
+    <div id="score">Счёт: 0</div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
@@ -72,6 +107,8 @@
     let currentLane = 1;
     let gameStarted = false;
     let enemies = [];
+    let scoreIntervalId;
+    const scoreDisplay = document.getElementById('score');
 
     function setPlayerImage(src) {
       player.style.backgroundImage = `url(${src})`;
@@ -93,8 +130,16 @@
       setPlayerImage('run1.png');
       runAnimation();
       generateEnemy();
+      score = 0;
+      startScoreCounter();
       gameLoop();
     }
+    function startScoreCounter() {
+            scoreIntervalId = setInterval(() => {
+                score++;
+                scoreDisplay.textContent = `Счёт: ${score}`;
+            }, 1000);
+        }
 
     let runFrame = 1;
     function runAnimation() {
@@ -103,12 +148,22 @@
         setPlayerImage(`run${runFrame}.png`);
       }, 200);
     }
-
-    function generateEnemy() {
+//сделать генерацию кактусов в 1х 2х лниях и птеродактилей в 2х верхних линиях
+function generateEnemy() {
       setInterval(() => {
-        const type = Math.random() > 0.5 ? 'cactus' : 'pterodactyl';
-        const laneIndex = Math.floor(Math.random() * 3);
-        const enemy = document.createElement('div');
+        let mr = Math.random()
+        let type = Math.random() > 0.5 ? 'cactus' : 'pterodactyl';
+        if (mr == 1 ){ 
+          mr = mr - 0.1
+        }
+        if(mr <= 0.4 && type == 'cactus' ){
+          mr = mr + 0.3
+        }
+        if(mr >= 0.7 && type == 'pterodactyl' ){
+          mr = mr - 0.4
+        }
+        let laneIndex = Math.floor(mr * 3);
+        let enemy = document.createElement('div');
         enemy.classList.add('enemy');
         enemy.style.top = `${lanes[laneIndex] * 100}%`;
         enemy.style.transform = 'translateY(-50%)';
@@ -117,7 +172,7 @@
         enemy.style.backgroundImage = `url('${type}1.png')`;
         game.appendChild(enemy);
         enemies.push(enemy);
-
+        
         // Animation frames
         let frame = 1;
         const frameInterval = setInterval(() => {
@@ -138,17 +193,68 @@
         });
       }, 2000);
     }
+    // function generateEnemy() {
+    //   setInterval(() => {
+    //     const type = Math.random() > 0.5 ? 'cactus' : 'pterodactyl';
+    //     const laneIndex = Math.floor(Math.random() * 3);
+    //     const enemy = document.createElement('div');
+    //     enemy.classList.add('enemy');
+    //     enemy.style.top = `${lanes[laneIndex] * 100}%`;
+    //     enemy.style.transform = 'translateY(-50%)';
+    //     enemy.dataset.lane = laneIndex;
+    //     enemy.dataset.type = type;
+    //     enemy.style.backgroundImage = `url('${type}1.png')`;
+    //     game.appendChild(enemy);
+    //     enemies.push(enemy);
 
+    //     // Animation frames
+    //     let frame = 1;
+    //     const frameInterval = setInterval(() => {
+    //       frame = frame === 1 ? 2 : 1;
+    //       enemy.style.backgroundImage = `url('${type}${frame}.png')`;
+    //     }, 300);
+
+    //     anime({
+    //       targets: enemy,
+    //       right: '110vw',
+    //       duration: 5000,
+    //       easing: 'linear',
+    //       complete: () => {
+    //         clearInterval(frameInterval);
+    //         enemy.remove();
+    //         enemies = enemies.filter(e => e !== enemy);
+    //       }
+    //     });
+    //   }, 2000);
+    // }
+    function checkCollision(playerHitbox, enemyHitbox, playerLane, enemyLane) {
+      const overlapX = playerHitbox.right > enemyHitbox.left && playerHitbox.left < enemyHitbox.right;
+      const overlapY = playerHitbox.bottom > enemyHitbox.top && playerHitbox.top < enemyHitbox.bottom;
+      return overlapX && overlapY && playerLane === enemyLane;
+}
     function gameLoop() {
       setInterval(() => {
         const playerRect = player.getBoundingClientRect();
-        enemies.forEach(enemy => {
-          const enemyRect = enemy.getBoundingClientRect();
-          const overlapX = playerRect.right > enemyRect.left && playerRect.left < enemyRect.right;
-          const overlapY = playerRect.bottom > enemyRect.top && playerRect.top < enemyRect.bottom;
-          if (overlapX && overlapY && parseInt(enemy.dataset.lane) === currentLane) {
-            alert('Game Over!');
-            window.location.reload();
+        const playerHitbox = {
+          left: playerRect.left + 10, // Пример смещения хитбокса
+          top: playerRect.top + 10,
+          right: playerRect.right - 10,
+          bottom: playerRect.bottom - 10,
+        };
+        const playerLane = currentLane;
+
+        enemies.forEach(enemyElement => {
+          const enemyRect = enemyElement.getBoundingClientRect();
+          const enemyHitbox = {
+            left: enemyRect.left + 10,
+            top: enemyRect.top + 10,
+            right: enemyRect.right - 10,
+            bottom: enemyRect.bottom - 10,
+          };
+          const enemyLane = parseInt(enemyElement.dataset.lane);
+
+          if (checkCollision(playerHitbox, enemyHitbox, playerLane, enemyLane)) {
+            handleCollision();
           }
         });
       }, 100);
@@ -162,6 +268,29 @@
         moveToLane(currentLane + 1);
       }
     });
+
+    // Скрипт Саши
+    // Game Over. DO NOT TOUCH, OR THE GAME WILL BREAK!
+    document.querySelector(".restart").addEventListener("click", reload)
+    function reload(){
+      window.location.reload();
+      
+    }
+    function gameOver(){
+      let img = document.querySelector(".game-cover");
+      let img2 = document.querySelector(".death-screen")
+      let img3 = document.querySelector(".restart")
+      img.style.opacity = 1;
+      img2.style.opacity = 1;
+      img3.style.opacity = 1;
+      let audio = document.querySelector("death-sound");
+        audio.play()       
+    }
+    // Скрипт лизы
+    function handleCollision() {
+      gameOver();
+      gameStarted = false;
+    }
   </script>
 </body>
 </html>
